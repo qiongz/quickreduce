@@ -1,0 +1,11 @@
+cmake-build-*
+.idea
+.DS_Store
+build
+dist
+*.egg-info
+*.pyc
+.vscode
+
+.build/
+build/
