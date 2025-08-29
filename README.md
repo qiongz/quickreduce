@@ -1,6 +1,6 @@
-# QuickReduce
+# MK1 QuickReduce
 
-QuickReduce is a performant all-reduce library designed for AMD ROCm that supports inline compression. Compared to RCCL, QuickReduce achieves up to 2.25x faster performance on 2xMI300X and 4xMI300X configurations, and outperforms RCCL for all multi-GPU (single node) configurations when tuned.
+QuickReduce is a performant all-reduce library, developed by [MK1](https://mk1.ai/), designed for AMD ROCm that supports inline compression. Compared to RCCL, QuickReduce achieves up to 2.25x faster performance on 2xMI300X and 4xMI300X configurations, and outperforms RCCL for all multi-GPU (single node) configurations when tuned.
 
 The library implements an all-reduce algorithm using hardware-optimized kernels that leverage powerful CDNA3 vector instructions for fast compression and decompression, interleaving compute with network/memory access. We expect our approach can also be ported to NVIDIA GPU architectures to improve NCCL, and leave this for further exploration.
 
