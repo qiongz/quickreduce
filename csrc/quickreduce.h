@@ -17,6 +17,10 @@
 
 namespace quickreduce {
 
+using fptr_t = int64_t;
+static_assert(sizeof(void*) == sizeof(fptr_t));
+
+
 enum struct QuickReduceProfile {
     TWOSHOT_FP16 = 1,
     TWOSHOT_FP8 = 2,
@@ -48,6 +52,7 @@ struct DeviceComms {
 
     uint8_t* dbuffer;
     uint8_t** dbuffer_list;
+    hipStream_t stream;
     hipIpcMemHandle_t buffer_ipc_handle;
     std::vector<hipIpcMemHandle_t> all_buffer_ipc_handles;
     std::vector<uint8_t*> buffer_list;

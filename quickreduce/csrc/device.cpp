@@ -1,60 +1,56 @@
 #include <ATen/hip/HIPContext.h>
 #include <ATen/hip/impl/HIPGuardImplMasqueradingAsCUDA.h>
+#include <torch/all.h>
 #include "device.h"
 
 
-void Device::init(int world_size, int rank) {
-    this->stream = at::cuda::getCurrentHIPStreamMasqueradingAsCUDA();
-    this->comms.init(world_size, rank);
+quickreduce::fptr_t init(int world_size, int rank) {
+    quickreduce::DeviceComms* fptr = new quickreduce::DeviceComms();
+    fptr->init(world_size, rank);
+    return (quickreduce::fptr_t) fptr;
+}
+
+/*
+void destroy(quickreduce::fptr_t _fa) {
+  if (_fa) {
+    auto fa = reinterpret_cast<quickreduce::DeviceComms*>(_fa);
+    fa->destroy();
+    delete fa;
+  }
+}
+*/ 
+torch::Tensor get_handle(quickreduce::fptr_t _fa) {
+  auto fa = reinterpret_cast<quickreduce::DeviceComms*>(_fa);
+  hipIpcMemHandle_t handle = fa->get_handle();
+  auto options =
+      torch::TensorOptions().dtype(torch::kUInt8).device(torch::kCPU);
+  auto data_handle =
+      torch::empty({static_cast<int64_t>(sizeof(hipIpcMemHandle_t))}, options);
+  std::memcpy(data_handle.data_ptr(), &handle, sizeof(hipIpcMemHandle_t));
+  return data_handle;
 }
 
 
-// ============================================================
-// API
-// ============================================================
-// Unique instance of the Device with explicit ownership.
-// Note: Alternatively, we can use a singleton pattern - but this has more cons than pros.
-static std::unique_ptr<Device> device_ = std::make_unique<Device>();
-
-std::unique_ptr<Device>& device() {
-    return device_;
+void open_handles(quickreduce::fptr_t _fa,
+                     const std::vector<torch::Tensor>& handles) {
+  auto fa = reinterpret_cast<quickreduce::DeviceComms*>(_fa);
+  std::vector<hipIpcMemHandle_t> ipc_handles;
+  ipc_handles.reserve(handles.size());
+  for (auto& handle : handles) {
+    // Ensure the tensor is on the same device as the current device.
+    hipIpcMemHandle_t ipc_handle;
+    std::memcpy(&ipc_handle, handle.data_ptr(), sizeof(hipIpcMemHandle_t));
+    ipc_handles.push_back(ipc_handle);
+  }
+  fa->open_ipc_handles(ipc_handles);
 }
 
-void init(int world_size, int rank) {
-    device()->init(world_size, rank);
-}
 
-int get_world_size() {
-    return device()->comms.get_world_size();
-}
-
-int get_rank() {
-    return device()->comms.get_rank();
-}
-
-comm_handle get_comm_handle() {
-    hipIpcMemHandle_t handle = device()->comms.get_handle();
-
-    comm_handle msg;
-    std::copy(handle.reserved, handle.reserved + sizeof(hipIpcMemHandle_t), msg.begin());
-    return msg;
-}
-
-void set_comm_handles(std::vector<comm_handle> const& comm_handles) {
-    int world_size = comm_handles.size();
-    std::vector<hipIpcMemHandle_t> ipc_handles(world_size);
-
-    for (int i = 0; i < world_size; i++) {
-        std::copy(comm_handles[i].begin(), comm_handles[i].end(), ipc_handles[i].reserved);
-    }
-
-    device()->comms.open_ipc_handles(ipc_handles);
-}
-
-void allreduce(int profile, torch::Tensor & A) {
-    device()->comms.allreduce(
+void allreduce(quickreduce::fptr_t _fa, int64_t profile, torch::Tensor& inp ) {
+    auto fa = reinterpret_cast<quickreduce::DeviceComms*>(_fa);
+    fa->allreduce(
         profile,
-        device()->stream,
-        reinterpret_cast<half*>(A.data_ptr()),
-        A.numel());
+        fa->stream,
+        reinterpret_cast<half*>(inp.data_ptr()),
+        inp.numel());
 }

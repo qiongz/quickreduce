@@ -1,5 +1,7 @@
 #include <hip/hip_runtime.h>
 #include <core/allreduce.h>
+#include <ATen/hip/HIPContext.h>
+#include <ATen/hip/impl/HIPGuardImplMasqueradingAsCUDA.h>
 #include "quickreduce.h"
 
 namespace quickreduce {
@@ -9,6 +11,7 @@ namespace quickreduce {
 // ============================================================
 void DeviceComms::init(int world_size, int rank) {
     destroy();
+    this->stream = at::cuda::getCurrentHIPStreamMasqueradingAsCUDA();
     this->world_size = world_size;
     this->rank = rank;
 

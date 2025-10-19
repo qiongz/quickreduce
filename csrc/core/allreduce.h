@@ -145,8 +145,9 @@ struct AllReduceOneshot {
             int* flag_ptr = reinterpret_cast<int*>(rank_buffer + r * flags_stride + block * sizeof(int));
             __atomic_store_n(flag_ptr, flag_color, __ATOMIC_RELAXED);
         }
-
+        
         // --------------------------------------------------------
+        __syncthreads();
         // Inplace overwrite
         BufferResource dst_buffer(A, N * sizeof(half));
         int dst_offset = block * kTileSize + thread * sizeof(int32x4_t);
@@ -989,6 +990,7 @@ struct AllReduceTwoshot {
 
         // --------------------------------------------------------
         // inplace orverwrite 
+        __syncthreads();
         BufferResource dst_buffer(A, N * sizeof(half));
         int dst_offset = block * kTileSize + thread * sizeof(int32x4_t);
 
