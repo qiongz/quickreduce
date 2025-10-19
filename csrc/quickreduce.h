@@ -3,6 +3,8 @@
 #include <vector>
 #include <hip/hip_runtime.h>
 #include <hip/hip_fp16.h>
+#include <ATen/hip/HIPContext.h>
+#include <ATen/hip/impl/HIPGuardImplMasqueradingAsCUDA.h>
 
 
 #define HIP_CHECK(err)                                                              \
@@ -35,33 +37,26 @@ Desc:
     Device Comms Handle
 */
 struct DeviceComms {
-    // Workgroup scope = Tile = (256 threads x 16B x 8 atoms)
-    static long constexpr kTileSize = 256 * 16 * 8;
+    int64_t kMaxProblemSize =
+      static_cast<int64_t>(std::numeric_limits<int32_t>::max()) + 1;
+  static int constexpr kMaxWorldSize = 8;
 
-    // Max problem size is 512MB (in bytes)
-    static long constexpr kMaxProblemSize = 536870912;
-    static long constexpr kMaxTiles = kMaxProblemSize / kTileSize;
+  bool initialized = false;
+  uint32_t flag_color = 1;
+  int world_size;
+  int rank;
 
-    // Max TP-8
-    static int constexpr kMaxWorldSize = 8;
-
-    bool initialized = false;
-    int flag_color = 1;
-    int world_size;
-    int rank;
-
-    uint8_t* dbuffer;
-    uint8_t** dbuffer_list;
-    hipStream_t stream;
-    hipIpcMemHandle_t buffer_ipc_handle;
-    std::vector<hipIpcMemHandle_t> all_buffer_ipc_handles;
-    std::vector<uint8_t*> buffer_list;
-    long data_offset;
+  uint8_t* dbuffer;
+  uint8_t** dbuffer_list;
+  hipIpcMemHandle_t buffer_ipc_handle;
+  std::vector<hipIpcMemHandle_t> all_buffer_ipc_handles;
+  std::vector<uint8_t*> buffer_list;
+  uint32_t data_offset;
 
     DeviceComms() : initialized(false), world_size(1), rank(0) {}
     ~DeviceComms() { destroy(); }
 
-    void init(int world_size, int rank);
+    void init(int world_size, int rank, std::optional<int64_t> max_problem_size);
     int get_world_size() { return world_size; }
     int get_rank() { return rank; }
     bool status() { return initialized; }
@@ -69,7 +64,8 @@ struct DeviceComms {
 
     hipIpcMemHandle_t const get_handle() { return buffer_ipc_handle; }
     void open_ipc_handles(std::vector<hipIpcMemHandle_t> const& ipc_handles);
-    void allreduce(int profile, hipStream_t stream, half * A,  int N);
+    void allreduce(half * A, uint32_t N, int quant_level,
+                 hipStream_t stream, bool cast_bf2half);
 };
 
 }  // namespace quickreduce

@@ -8,7 +8,9 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
    // m.def('destroy', &destroy);
    // m.def("get_world_size", &get_world_size);
    // m.def("get_rank", &get_rank);
+   // m.def('qr_max_size', &qr_max_size);
     m.def("get_handle", &get_handle);
     m.def("open_handles", &open_handles);
     m.def("allreduce", &allreduce);
+
 }
