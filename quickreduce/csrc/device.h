@@ -27,4 +27,4 @@ int get_world_size();
 int get_rank();
 comm_handle get_comm_handle();
 void set_comm_handles(std::vector<comm_handle> const& comm_handles);
-torch::Tensor allreduce(int profile, torch::Tensor const& A);
+void allreduce(int profile, torch::Tensor & A);

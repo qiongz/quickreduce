@@ -51,13 +51,10 @@ void set_comm_handles(std::vector<comm_handle> const& comm_handles) {
     device()->comms.open_ipc_handles(ipc_handles);
 }
 
-torch::Tensor allreduce(int profile, torch::Tensor const& A) {
-    torch::Tensor C = torch::empty_like(A);
+void allreduce(int profile, torch::Tensor & A) {
     device()->comms.allreduce(
         profile,
         device()->stream,
-        reinterpret_cast<half const*>(A.data_ptr()),
-        reinterpret_cast<half*>(C.data_ptr()),
+        reinterpret_cast<half*>(A.data_ptr()),
         A.numel());
-    return C;
 }

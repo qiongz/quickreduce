@@ -23,8 +23,7 @@ struct AllReduceOneshot {
 
     __device__
     static void run(
-        half const* __restrict__ A,                 // input
-        half* __restrict__ B,                       // output
+        half * __restrict__ A,                 // input & inplace modifed reduced output, same on all gpus
         int const N,                                // number of elements
         int const block,                            // this block's index
         int const num_blocks,                       // total number of blocks
@@ -148,8 +147,8 @@ struct AllReduceOneshot {
         }
 
         // --------------------------------------------------------
-        // Write the result to B.
-        BufferResource dst_buffer(B, N * sizeof(half));
+        // Inplace overwrite
+        BufferResource dst_buffer(A, N * sizeof(half));
         int dst_offset = block * kTileSize + thread * sizeof(int32x4_t);
 
         for (int i = 0; i < kAtoms; i++) {
@@ -875,8 +874,7 @@ struct AllReduceTwoshot {
 
     __device__
     static void run(
-        half const* __restrict__ A,                 // input
-        half* __restrict__ B,                       // output
+        half * __restrict__ A,                 // input
         int const N,                                // number of elements
         int const block,                            // block index
         int const num_blocks,                       // number of blocks
@@ -990,8 +988,8 @@ struct AllReduceTwoshot {
         }
 
         // --------------------------------------------------------
-        // Write the result to B.
-        BufferResource dst_buffer(B, N * sizeof(half));
+        // inplace orverwrite 
+        BufferResource dst_buffer(A, N * sizeof(half));
         int dst_offset = block * kTileSize + thread * sizeof(int32x4_t);
 
         for (int i = 0; i < kAtoms; i++) {

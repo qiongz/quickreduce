@@ -71,14 +71,14 @@ void DeviceComms::open_ipc_handles(std::vector<hipIpcMemHandle_t> const& ipc_han
 // ============================================================
 template <typename AllReduceKenel>
 __global__ __quickreduce_launch_bounds__
-static void allreduce_prototype(half const* A, half* B, int N, int num_blocks,
+static void allreduce_prototype(half * A,  int N, int num_blocks,
         int world_size, int rank, uint8_t** dbuffer_list, long data_offset, int flag_color) {
 
     int block = blockIdx.x;
     int grid = gridDim.x;
 
     while (block < num_blocks) {
-        AllReduceKenel::run(A, B, N, block, num_blocks, world_size, rank, dbuffer_list, data_offset, flag_color);
+        AllReduceKenel::run(A, N, block, num_blocks, world_size, rank, dbuffer_list, data_offset, flag_color);
         block += grid;
     }
 }
@@ -92,7 +92,7 @@ static void allreduce_prototype(half const* A, half* B, int N, int num_blocks,
         using AllReduceKernel = AllReduceTwoshot<LineCodec>;                    \
         hipLaunchKernelGGL((allreduce_prototype<AllReduceKernel>),              \
             dim3(grid), dim3(kBlock), 0, stream,                                \
-            A, B, N, num_blocks, world_size, rank, dbuffer_list,                \
+            A, N, num_blocks, world_size, rank, dbuffer_list,                \
             data_offset, flag_color);                                           \
     }                                                                           \
     else if (world_size == 4) {                                                 \
@@ -100,7 +100,7 @@ static void allreduce_prototype(half const* A, half* B, int N, int num_blocks,
         using AllReduceKernel = AllReduceTwoshot<LineCodec>;                    \
         hipLaunchKernelGGL((allreduce_prototype<AllReduceKernel>),              \
             dim3(grid), dim3(kBlock), 0, stream,                                \
-            A, B, N, num_blocks, world_size, rank, dbuffer_list,                \
+            A, N, num_blocks, world_size, rank, dbuffer_list,                \
             data_offset, flag_color);                                           \
     }                                                                           \
     else if (world_size == 8) {                                                 \
@@ -108,11 +108,11 @@ static void allreduce_prototype(half const* A, half* B, int N, int num_blocks,
         using AllReduceKernel = AllReduceTwoshot<LineCodec>;                    \
         hipLaunchKernelGGL((allreduce_prototype<AllReduceKernel>),              \
             dim3(grid), dim3(kBlock), 0, stream,                                \
-            A, B, N, num_blocks, world_size, rank, dbuffer_list,                \
+            A, N, num_blocks, world_size, rank, dbuffer_list,                \
             data_offset, flag_color);                                           \
     }
 
-void DeviceComms::allreduce(int profile, hipStream_t stream, half const* A, half* B, int N) {
+void DeviceComms::allreduce(int profile, hipStream_t stream, half * A,  int N) {
     if (world_size != 2 && world_size != 4 && world_size != 8) {
         throw std::runtime_error("All Reduce not supported for world_size = " + std::to_string(world_size));
     }

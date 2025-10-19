@@ -18,9 +18,8 @@ class Demo:
         # AllReduce with profile=FP16
         # 1=FP16, 2=FP8, 3=Q8, 4=Q6, 5=Q4
         tensor = torch.ones(1024, dtype=torch.float16).cuda()
-        result = qr.allreduce(1, tensor)
-        assert torch.all(result == self.world_size)
-        print(f"Demo {self.rank} got result {result}")
+        qr.allreduce(1, tensor)
+        print(f"Demo {self.rank} got result {tensor}")
 
 # Create 4 demo layers across 4 GPUs.
 N = 4

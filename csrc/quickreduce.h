@@ -64,7 +64,7 @@ struct DeviceComms {
 
     hipIpcMemHandle_t const get_handle() { return buffer_ipc_handle; }
     void open_ipc_handles(std::vector<hipIpcMemHandle_t> const& ipc_handles);
-    void allreduce(int profile, hipStream_t stream, half const* A, half* B, int N);
+    void allreduce(int profile, hipStream_t stream, half * A,  int N);
 };
 
 }  // namespace quickreduce
