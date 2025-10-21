@@ -18,7 +18,7 @@ void DeviceComms::init(int world_size, int rank, std::optional<int64_t> max_prob
     // Allocate buffer size for worst case: F16 2-stage buffer.
     uint32_t flags_buffer_size =
         2 * world_size * kMaxNumBlocks * sizeof(uint32_t);
-    static int64_t data_buffer_size = 2 * this->kMaxProblemSize;
+    int64_t data_buffer_size = 2 * this->kMaxProblemSize;
     int64_t total_buffer_size = flags_buffer_size + data_buffer_size;
     data_offset = flags_buffer_size;
     HIP_CHECK(hipExtMallocWithFlags((void**)&dbuffer, total_buffer_size,
@@ -38,20 +38,31 @@ void DeviceComms::init(int world_size, int rank, std::optional<int64_t> max_prob
     initialized = true;
 }
 
-void DeviceComms::destroy()  {
-    if (initialized) {
-      for (int i = 0; i < world_size; i++) {
-        if (i != rank) {
-          HIP_CHECK(hipIpcCloseMemHandle(dbuffer_list[i]));
-        }
-      }
+void DeviceComms::destroy() {
+  if (!initialized) return;
 
-      HIP_CHECK(hipFree(dbuffer));
-      HIP_CHECK(hipFree(dbuffer_list));
-
-      initialized = false;
+  // 关闭远端 IPC 映射（host 侧记录在 buffer_list[i]）
+  for (int i = 0; i < world_size; i++) {
+    if (i != rank && buffer_list[i] != nullptr) {
+      HIP_CHECK(hipIpcCloseMemHandle(buffer_list[i]));   // ✅ 用 buffer_list
+      buffer_list[i] = nullptr;
     }
   }
+
+  if (dbuffer_list) {
+    HIP_CHECK(hipFree(dbuffer_list));
+    dbuffer_list = nullptr;
+  }
+  if (dbuffer) {
+    HIP_CHECK(hipFree(dbuffer));
+    dbuffer = nullptr;
+  }
+
+  all_buffer_ipc_handles.clear();
+  buffer_list.clear();
+
+  initialized = false;
+}
 
 void DeviceComms::open_ipc_handles(std::vector<hipIpcMemHandle_t> const& ipc_handles) {
     assert(ipc_handles.size() == all_buffer_ipc_handles.size());
@@ -81,7 +92,7 @@ void DeviceComms::open_ipc_handles(std::vector<hipIpcMemHandle_t> const& ipc_han
 
 template <typename AllReduceKernel>
 __global__ __quickreduce_launch_bounds_two_shot__ static void
-allreduce_prototype_twoshot(half * A, uint32_t N, uint32_t num_blocks,
+allreduce_prototype_twoshot(half  * A,  uint32_t N, uint32_t num_blocks,
                             int rank, uint8_t** dbuffer_list,
                             uint32_t data_offset, uint32_t flag_color) {
   int block = blockIdx.x;
@@ -126,7 +137,7 @@ enum QuickReduceQuantLevel {
   INT4 = 3,
 };
 
-void DeviceComms::allreduce(half * A, uint32_t N, int quant_level,
+void DeviceComms::allreduce(half  * A, uint32_t N, int quant_level,
                  hipStream_t stream, bool cast_bf2half) {
      if (world_size != 2 && world_size != 4 && world_size != 8) {
       throw std::runtime_error("All Reduce not supported for world_size = " +

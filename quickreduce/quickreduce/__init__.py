@@ -5,5 +5,6 @@ from .device import (
   #  get_rank,
     get_handle,
     open_handles,
-    allreduce,
+    #allreduce,
+    allreduce_async
 )

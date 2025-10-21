@@ -14,7 +14,7 @@ rocm_arch = [f"--offload-arch={arch}" for arch in gpu_archs.split(";")]
 arch_flags = [f"-D__{arch}__" for arch in gpu_archs.split(";")]
 
 extra_compile_args = {
-    "cxx": ["-g", "-O3", "-fopenmp", "-lgomp", "-std=c++17", "-Wno-unused-function"],
+    "cxx": ["-g", "-O3", "-fopenmp", "-lgomp", "-std=c++17", "-Wno-unused-function","-pthread"],
     "nvcc": [
         "-O3", "-std=c++17",
         "-Wno-unused-result", "-Wno-undefined-internal",
