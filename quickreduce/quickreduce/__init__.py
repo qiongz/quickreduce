@@ -3,8 +3,9 @@ from .device import (
     init,
   #  get_world_size,
   #  get_rank,
+    destroy,
     get_handle,
     open_handles,
-    #allreduce,
+    allreduce,
     allreduce_async
 )
